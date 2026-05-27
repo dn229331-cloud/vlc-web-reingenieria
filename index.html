@@ -1,0 +1,240 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+    <head>
+        <title>VLC Media Player — Panel de Control (Reingeniería OLED)</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <meta name="referrer" content="no-referrer" />
+        <link href="favicon.ico" type="image/x-icon" rel="shortcut icon" />
+        <link type="text/css" href="css/ui-lightness/jquery-ui-1.8.13.custom.css" rel="stylesheet" />
+        <link type="text/css" href="css/main.css" rel="stylesheet" />
+        
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.13/jquery-ui.min.js"></script>
+        
+        <script type="text/javascript">
+        //<![CDATA[
+            $(document).ready(function(){
+                // Forzar visualización de contenedores principales
+                $('#libraryContainer').show();
+                $('#viewContainer').show();
+
+                // --------------------------------------------------
+                // ESTRUCTURA LOCAL DE CANCIONES (ARRAY)
+                // --------------------------------------------------
+                var canciones = [
+                    { src: "cancion1.mp3", titulo: "Canción 1: Éxito de Prueba MP3" },
+                    { src: "cancion2.mp3", titulo: "Canción 2: Pista de Demostración" },
+                    { src: "cancion3.mp3", titulo: "Canción 3: Audio de Evaluación" }
+                ];
+                
+                var indiceActual = 0; 
+
+                // Inyectar visualmente las canciones dentro del panel oscuro central
+                var listaHTML = '<ul style="list-style: none; padding: 20px; margin: 0; font-family: Arial, sans-serif;">';
+                for(var i = 0; i < canciones.length; i++) {
+                    listaHTML += '<li class="item-musica" data-index="' + i + '" data-src="' + canciones[i].src + '" style="padding: 15px; margin-bottom: 8px; background: #16161f; border-radius: 6px; cursor: pointer; color: #fff; border-left: 5px solid #ff6000; font-size: 14px; transition: all 0.2s;">🎵 <b style="color: #ff6000;">' + canciones[i].titulo.split(':')[0] + ':</b>' + canciones[i].titulo.split(':')[1] + ' <span style="color:#666; float:right; font-size:0.85em;">' + canciones[i].src + '</span></li>';
+                }
+                listaHTML += '</ul>';
+                
+                $('#libraryTree').html(listaHTML);
+                var miAudio = document.getElementById('audioNativo');
+
+                // Inicializar el deslizador de JQuery UI para la barra de progreso de VLC
+                $("#seekSlider").slider({
+                    range: "min",
+                    value: 0,
+                    min: 0,
+                    max: 100,
+                    slide: function(event, ui) {
+                        // Permitir al usuario arrastrar la barra superior para adelantar/atrasar la canción
+                        if(miAudio.duration) {
+                            var nuevoTiempo = (ui.value / 100) * miAudio.duration;
+                            miAudio.currentTime = nuevoTiempo;
+                        }
+                    }
+                });
+
+                // Función auxiliar para formatear los segundos a formato 00:00:00
+                function formatearTiempo(segundos) {
+                    if (isNaN(segundos)) return "00:00:00";
+                    var hrs = Math.floor(segundos / 3600);
+                    var mins = Math.floor((segundos % 3600) / 60);
+                    var secs = Math.floor(segundos % 60);
+                    return (hrs < 10 ? "0" : "") + hrs + ":" + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+                }
+
+                // SINCRONIZACIÓN EN TIEMPO REAL (Barra y Reloj Verde)
+                miAudio.addEventListener('timeupdate', function() {
+                    // 1. Actualizar el contador digital verde de la izquierda
+                    $('#currentTime').text(formatearTiempo(miAudio.currentTime));
+                    
+                    // 2. Mover la barra de progreso superior de forma automática
+                    if (miAudio.duration) {
+                        var porcentajeProgreso = (miAudio.currentTime / miAudio.duration) * 100;
+                        $("#seekSlider").slider("value", porcentajeProgreso);
+                    }
+                });
+
+                // Capturar el momento en que se conoce la duración real del archivo de audio
+                miAudio.addEventListener('loadedmetadata', function() {
+                    $('#totalTime').text(formatearTiempo(miAudio.duration));
+                });
+
+                // Función maestra para cambiar de canción
+                function cargarCancion(index) {
+                    if (index < 0 || index >= canciones.length) return; 
+                    
+                    indiceActual = index;
+                    var cancion = canciones[indiceActual];
+
+                    // Actualizar iluminación en el panel central
+                    $('.item-musica').css('background', '#16161f').css('color', '#fff');
+                    $('.item-musica[data-index="' + indiceActual + '"]').css('background', '#222230').css('color', '#00ff66');
+
+                    // Cambiar el origen del archivo en el reproductor inferior
+                    $('#audioSource').attr('src', cancion.src);
+                    miAudio.load(); 
+                    miAudio.play();
+
+                    // Sincronizar estados visuales de la botonera principal
+                    $('#buttonPlay').removeClass('paused').addClass('playing');
+                    $('#mediaTitle').text('Reproduciendo: ' + cancion.src + ' (Modo Activo)');
+                    $('#currentVolume').text('100%');
+                }
+
+                // Evento al dar clic directo sobre una canción de la lista
+                $('.item-musica').click(function() {
+                    var index = parseInt($(this).attr('data-index'));
+                    cargarCancion(index);
+                });
+
+                // Botón "Siguiente" (Next)
+                $('#buttonNext').click(function() {
+                    var siguiente = indiceActual + 1;
+                    if (siguiente >= canciones.length) {
+                        siguiente = 0; 
+                    }
+                    cargarCancion(siguiente);
+                    return false;
+                });
+
+                // Botón "Anterior" (Prev)
+                $('#buttonPrev').click(function() {
+                    var anterior = indiceActual - 1;
+                    if (anterior < 0) {
+                        anterior = canciones.length - 1; 
+                    }
+                    cargarCancion(anterior);
+                    return false;
+                });
+
+                // Control del botón clásico PLAY / PAUSE de VLC
+                $('#buttonPlay').click(function() {
+                    if (miAudio.paused) {
+                        miAudio.play();
+                        $(this).removeClass('paused').addClass('playing');
+                        $('#mediaTitle').text('Reproduciendo: ' + canciones[indiceActual].src + ' (Modo Activo)');
+                    } else {
+                        miAudio.pause();
+                        $(this).removeClass('playing').addClass('paused');
+                        $('#mediaTitle').text('Pausado: ' + canciones[indiceActual].src);
+                    }
+                    return false;
+                });
+
+                // Control del botón clásico STOP de VLC
+                $('#buttonStop').click(function() {
+                    miAudio.pause();
+                    miAudio.currentTime = 0;
+                    $("#seekSlider").slider("value", 0);
+                    $('#buttonPlay').removeClass('playing').addClass('paused');
+                    $('#mediaTitle').text('Transmisión Detenida');
+                    $('#currentTime').text('00:00:00');
+                    return false;
+                });
+
+                // Animaciones de Hover estéticos
+                $('.item-musica').hover(
+                    function() { $(this).css('border-left-color', '#00ff66').css('transform', 'translateX(4px)'); },
+                    function() { $(this).css('border-left-color', '#ff6000').css('transform', 'translateX(0px)'); }
+                );
+
+                // Alternar paneles con botones secundarios
+                $('#buttonPlayList').click(function(){
+                    $('#libraryTree').slideToggle();
+                    return false;
+                });
+                $('#buttonViewer').click(function(){
+                    $('#mediaViewer').slideToggle();
+                    return false;
+                });
+            });
+        //]]>
+        </script>
+    </head>
+    <body id="regular_layout" style="background: #050507; color: #fff;">
+        <div class="centered">
+        <div id="mainContainer" class="centered">
+            
+            <div id="controlContainer" class="ui-widget">
+                <div id="controlTable" class="ui-widget-content" style="background: #101014; border: 1px solid #1f1f26;">
+                    <ul id="controlButtons">
+                        <li id="buttonPrev" class="button48 ui-corner-all" title="Anterior"></li>
+                        <li id="buttonPlay" class="button48 ui-corner-all paused" title="Reproducir"></li>
+                        <li id="buttonNext" class="button48 ui-corner-all" title="Siguiente"></li>
+                        <li id="buttonOpen" class="button48 ui-corner-all" title="Abrir Archivo"></li>
+                        <li id="buttonStop" class="button48 ui-corner-all" title="Detener"></li>
+                        <li id="buttonFull" class="button48 ui-corner-all" title="Pantalla Completa"></li>
+                        <li id="buttonSout" class="button48 ui-corner-all" title="Transmitir"></li>
+                    </ul>
+                    <ul id="buttonszone2" class="buttonszone">
+                        <li id="buttonPlayList" class="button ui-widget ui-state-default ui-corner-all" title="Ocultar Panel"><span class="ui-icon ui-icon-note"></span>Lista</li>
+                        <li id="buttonViewer" class="button ui-widget ui-state-default ui-corner-all" title="Ocultar Reproductor"><span class="ui-icon ui-icon-video"></span>Reproductor</li>
+                    </ul>
+                    <div id="volumesliderzone">
+                        <div id="volumeSlider" title="Volumen"><img src="images/speaker-32.png" class="ui-slider-handle" alt="volume"/></div>
+                        <div id="currentVolume" class="dynamic" style="color: #ff6000;">100%</div>
+                    </div>
+                    <div id="artszone">
+                        <img id="albumArt" src="images/vlc-48.png" width="141px" height="130px" alt="Album Art" />
+                    </div>
+                    <div id="mediaTitle" class="dynamic" style="color: #00ff66; font-weight: bold;">Por favor, selecciona una canción de la lista de abajo...</div>
+                    <div id="seekContainer">
+                        <div id="seekSlider" title="Posición"></div>
+                        <div id="currentTime" class="dynamic" style="color: #00ff66;">00:00:00</div>
+                        <div id="totalTime" class="dynamic">00:00:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="libraryContainer" class="ui-widget" style="margin-top: 15px;">
+                <div id="libraryTree" class="ui-widget-content" style="min-height: 180px; background: #0b0b0f; border: 1px solid #1f1f26; border-radius: 6px; overflow: hidden;">
+                    </div>
+            </div>
+
+            <div id="viewContainer" class="ui-widget" style="margin-top: 15px;">
+                <div id="mediaViewer" class="ui-widget-content" style="background: #101014; border: 1px solid #1f1f26; border-radius: 6px; padding: 25px; text-align: center;">
+                    <div id="player" style="width: 100%;">
+                        <h3 style="color: #ff6000; margin-top: 0; margin-bottom: 15px; font-family: Arial, sans-serif; letter-spacing: 1px;">🎵 REPRODUCTOR DE REINGENIERÍA AUDIO LOCAL</h3>
+                        <audio id="audioNativo" controls style="width: 95%; margin: 0 auto; background: #1a1a24; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                            <source id="audioSource" src="cancion1.mp3" type="audio/mpeg">
+                            Tu navegador no soporta el elemento de audio HTML5.
+                        </audio>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer" style="color: #555; text-align: center; margin-top: 20px;">
+                VLC Media Player - Lua Web Interface - Reingeniería Académica
+            </div>
+        </div>
+        </div>
+
+        <div class="panel-reingenieria" style="position: fixed; bottom: 20px; right: 20px; background: #101014; border: 1px solid #ff6000; padding: 15px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.7); font-family: sans-serif; z-index: 9999;">
+            <b style="color: #ff6000; font-size: 1.1em; display: block; margin-bottom: 5px;">🔧 REINGENIERÍA DE INTERFAZ</b>
+            <small style="color: #888;">Proyecto:</small> <span style="color: #fff; font-weight: bold;">VLC Web Core</span><br/>
+            <small style="color: #888;">Desarrollador:</small> <span style="color: #00ff66; font-weight: bold;">Jeison</span><br/>
+            <small style="color: #888;">Entorno:</small> <span style="color: #00ff66;">Modo Oscuro OLED (Estable)</span>
+        </div>
+    </body>
+</html>
