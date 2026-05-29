@@ -7,3 +7,4 @@ uploads/*.wav
 
 # Ignorar variables de entorno secretas (si usas un archivo .env)
 .env
+node_modules/
