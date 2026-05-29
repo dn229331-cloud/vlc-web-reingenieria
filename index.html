@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html>
     <head>
         <title>VLC Media Player — Panel de Control (Reingeniería OLED)</title>
@@ -10,172 +10,669 @@
         <link type="text/css" href="css/main.css" rel="stylesheet" />
 
         <style>
-            body { background: #050507 !important; color: #fff !important; }
-            #controlTable { background: #101014 !important; border: 1px solid #1f1f26 !important; }
-            #libraryTree { background: #0b0b0f !important; border: 1px solid #1f1f26 !important; min-height: 180px; }
-            .item-musica { background: #16161f !important; color: #fff !important; padding: 12px; margin-bottom: 6px; border-left: 5px solid #ff6000; list-style: none; cursor: pointer; }
-            #mediaViewer { background: #101014 !important; border: 1px solid #1f1f26 !important; }
+            body { background: #050507 !important; color: #fff !important; font-family: Arial, sans-serif; }
+            #controlTable { background: #101014 !important; border: 1px solid #1f1f26 !important; border-radius: 16px; box-shadow: 0 18px 40px rgba(255,96,0,0.14); min-height: 360px; padding: 20px 15px; }
+            #libraryTree { background: #0b0b0f !important; border: 1px solid #1f1f26 !important; min-height: 180px; border-radius: 12px; padding: 8px; }
+            .item-musica { background: #16161f !important; color: #fff !important; padding: 12px; margin-bottom: 6px; border-left: 5px solid #ff6000; list-style: none; cursor: pointer; border-radius: 12px; transition: all 0.25s ease; }
+            .item-musica:hover { border-left-color: #00ff66; transform: translateX(2px); }
+            .item-musica.active { background: #1b1c27; border-left-color: #00ff66; }
+            .video-card { background: #121217; color: #fff; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,96,0,0.15); border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.25s ease; }
+            .video-card:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(255,96,0,0.10); }
+            .video-card.active { border-color: #00ff66; box-shadow: 0 0 18px rgba(0,255,102,0.18); }
+            .video-card h3 { margin: 0; font-size: 1rem; }
+            .video-card p { margin: 6px 0 0; color: #8f8f98; font-size: 0.9rem; }
+            #libraryTabs { display: flex; gap: 10px; margin-bottom: 12px; }
+            .tab-button { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #9b9ba2; padding: 10px 18px; border-radius: 999px; cursor: pointer; font-weight: bold; }
+            .tab-button.active { background: rgba(255,96,0,0.18); color: #fff; box-shadow: 0 8px 20px rgba(255,96,0,0.12); }
+            .pill { background: rgba(255,96,0,0.12); color: #ff6000; padding: 6px 10px; border-radius: 999px; font-size: 0.85em; }
+            #mediaViewer { background: #101014 !important; border: 1px solid #1f1f26 !important; border-radius: 16px; }
+            #playerStatus { margin-top: 8px; color: #00ff66; font-size: 0.95em; }
+            .button48 { width: 46px; height: 46px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; color: #fff; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.25s ease; border-radius: 12px; }
+            .button48:hover { background: rgba(255,96,0,0.16); box-shadow: 0 0 18px rgba(255,96,0,0.18); }
+
+            #artszone { text-align: center; margin: 14px 0; }
+            #artszone img { display: inline-block; border-radius: 18px; width: 141px; height: 130px; object-fit: cover; }
+            .hidden { display: none !important; }
+            #audioNativo, #videoNativo { border-radius: 24px; box-shadow: 0 10px 28px rgba(0,0,0,0.28); }
+            #seekSlider, #volumeSlider { border-radius: 999px; background: rgba(255,255,255,0.06); margin: 10px 0; }
+            .ui-slider .ui-slider-range { background: linear-gradient(90deg, #ff6000, #00ff66); }
+            .ui-slider .ui-slider-handle { width: 18px; height: 18px; top: -4px; border: 2px solid #ff6000; background: #ff6000; box-shadow: 0 0 12px rgba(255,96,0,0.42); }
+            #controlButtons { text-align: center; padding: 0; margin: 14px 0 4px 0; display: flex; justify-content: center; gap: 14px; }
+            .dm-result:hover { border-color: #ff6000 !important; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,96,0,0.12); }
+            #seekContainer { margin: 12px 0; width: 100%; }
+            #volumesliderzone { text-align: center; margin: 12px 0; }
+            #mediaTitle { text-align: center; margin: 10px 0; }
+
+            /* === LOGIN / REGISTER OVERLAY === */
+            #authOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(5,5,7,0.92); z-index:99999; display:flex; align-items:center; justify-content:center; }
+            #authBox { background:#101014; border:1px solid rgba(255,96,0,0.25); border-radius:20px; padding:35px 40px; width:380px; box-shadow:0 30px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,96,0,0.06); }
+            #authBox h2 { color:#ff6000; margin:0 0 6px 0; font-size:1.3rem; text-align:center; }
+            #authBox p { color:#666; font-size:0.85rem; text-align:center; margin:0 0 20px 0; }
+            #authBox input { width:100%; padding:12px 16px; margin-bottom:12px; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:#fff; font-size:0.9rem; outline:none; box-sizing:border-box; }
+            #authBox input:focus { border-color:#ff6000; }
+            #authToggle { text-align:center; margin-top:14px; font-size:0.82rem; color:#888; }
+            #authToggle a { color:#ff6000; cursor:pointer; text-decoration:none; }
+            #authToggle a:hover { text-decoration:underline; }
+            #authError { color:#ff4444; font-size:0.82rem; text-align:center; margin-bottom:10px; display:none; }
+            .auth-btn { width:100%; padding:12px; border:none; border-radius:12px; background:linear-gradient(135deg,#ff6000,#e05500); color:#fff; font-size:0.95rem; font-weight:700; cursor:pointer; }
+            .auth-btn:hover { box-shadow:0 0 20px rgba(255,96,0,0.3); }
+
+            /* === USER GREETING BAR === */
+            #userBar { display:none; background:linear-gradient(135deg,rgba(255,96,0,0.10),rgba(0,255,102,0.05)); border:1px solid rgba(255,96,0,0.2); border-radius:14px; padding:12px 20px; margin-bottom:14px; align-items:center; justify-content:space-between; box-shadow:0 0 25px rgba(255,96,0,0.06); }
+            #userGreeting { color:#fff; font-size:1.05rem; font-weight:600; display:flex; align-items:center; gap:10px; }
+            #userGreeting::before { content:'👤'; font-size:1.3rem; }
+            #userGreeting span { color:#00ff66; font-weight:700; }
+            #userGreeting small { color:#888; font-size:0.78rem; font-weight:400; margin-left:8px; }
+            #logoutBtn { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:#ccc; padding:7px 20px; border-radius:999px; cursor:pointer; font-size:0.8rem; transition:all 0.2s ease; }
+            #logoutBtn:hover { background:#ff6000; color:#fff; border-color:#ff6000; box-shadow:0 0 15px rgba(255,96,0,0.2); }
+
+            /* === HISTORY SECTION === */
+            #historySection { display:none; margin-top:10px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.04); border-radius:12px; padding:10px 14px; }
+            #historyTitle { color:#ff6000; font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+            #historyTitle::before { content:'🕐'; font-size:0.9rem; }
+            #historyList { list-style:none; padding:0; margin:0; max-height:160px; overflow-y:auto; }
+            #historyList li { padding:7px 12px; background:rgba(255,255,255,0.02); border-radius:8px; margin-bottom:4px; font-size:0.8rem; color:#ccc; border-left:3px solid rgba(255,96,0,0.25); display:flex; align-items:center; gap:6px; }
+
+            /* === DELETE BUTTON ON SONGS === */
+            .delete-song { background:rgba(255,30,30,0.12); border:1px solid rgba(255,30,30,0.25); color:#ff4444; width:30px; height:30px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; line-height:1; transition:all 0.2s ease; margin-left:10px; vertical-align:middle; }
+            .delete-song:hover { background:rgba(255,30,30,0.3); color:#ff6666; border-color:rgba(255,30,30,0.5); box-shadow:0 0 12px rgba(255,30,30,0.2); transform:scale(1.05); }
         </style>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.13/jquery-ui.min.js"></script>
-        
         <script type="text/javascript">
         //<![CDATA[
+            var API = 'http://localhost:3000/api';
+            var AUTH_TOKEN = null;
+            var currentUser = null;
+            var audioLibrary = [];
+            var videoLibrary = [
+                { src: 'https://media.w3.org/2010/05/sintel/trailer.mp4', titulo: 'Video 1: Demostración de Streaming', badge: 'Demo HD' },
+                { src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', titulo: 'Video 2: Render UI Test', badge: 'Demo HD' },
+                { src: 'https://media.w3.org/2010/05/bunny/movie.mp4', titulo: 'Video 3: Ensayo de Flujo', badge: 'Demo HD' }
+            ];
+            var currentMode = 'audio';
+            var currentIndex = 0;
+
             $(document).ready(function(){
-                // Forzar visualización de contenedores principales
                 $('#libraryContainer').show();
                 $('#viewContainer').show();
 
-                // --------------------------------------------------
-                // ESTRUCTURA LOCAL DE CANCIONES (ARRAY)
-                // --------------------------------------------------
-                var canciones = [
-                    { src: "cancion1.mp3", titulo: "Canción 1: Éxito de Prueba MP3" },
-                    { src: "cancion2.mp3", titulo: "Canción 2: Pista de Demostración" },
-                    { src: "cancion3.mp3", titulo: "Canción 3: Audio de Evaluación" }
-                ];
-                
-                var indiceActual = 0; 
+                function setAuth() { AUTH_TOKEN = localStorage.getItem('vlc_token'); }
+                setAuth();
 
-                // Inyectar visualmente las canciones dentro del panel oscuro central
-                var listaHTML = '<ul style="list-style: none; padding: 20px; margin: 0; font-family: Arial, sans-serif;">';
-                for(var i = 0; i < canciones.length; i++) {
-                    listaHTML += '<li class="item-musica" data-index="' + i + '" data-src="' + canciones[i].src + '" style="padding: 15px; margin-bottom: 8px; background: #16161f; border-radius: 6px; cursor: pointer; color: #fff; border-left: 5px solid #ff6000; font-size: 14px; transition: all 0.2s;">🎵 <b style="color: #ff6000;">' + canciones[i].titulo.split(':')[0] + ':</b>' + canciones[i].titulo.split(':')[1] + ' <span style="color:#666; float:right; font-size:0.85em;">' + canciones[i].src + '</span></li>';
+                var audioPlayer = document.getElementById('audioNativo');
+                var videoPlayer = document.getElementById('videoNativo');
+                var audioSource = document.getElementById('audioSource');
+                var videoSource = document.getElementById('videoSource');
+                var playerStatus = $('#playerStatus');
+                var mediaTitle = $('#mediaTitle');
+                var currentVolume = $('#currentVolume');
+                var currentTime = $('#currentTime');
+                var totalTime = $('#totalTime');
+                var seekSlider = $('#seekSlider');
+                var volumeSlider = $('#volumeSlider');
+                var currentPlayer = audioPlayer;
+
+                function formatearTiempo(segundos) {
+                    if (isNaN(segundos)) return '00:00:00';
+                    var hrs = Math.floor(segundos / 3600);
+                    var mins = Math.floor((segundos % 3600) / 60);
+                    var secs = Math.floor(segundos % 60);
+                    return (hrs < 10 ? '0' : '') + hrs + ':' + (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
                 }
-                listaHTML += '</ul>';
-                
-                $('#libraryTree').html(listaHTML);
-                var miAudio = document.getElementById('audioNativo');
 
-                // Inicializar el deslizador de JQuery UI para la barra de progreso de VLC
-                $("#seekSlider").slider({
-                    range: "min",
+                function renderLibrary() {
+                    if (currentMode === 'audio') {
+                        var html = '<ul class="audio-list">';
+                        for (var i = 0; i < audioLibrary.length; i++) {
+                            var item = audioLibrary[i];
+                            html += '<li class="item-musica' + (i === currentIndex ? ' active' : '') + '" data-index="' + i + '" data-src="' + (item.src || '/uploads/' + item.filename) + '">';
+                            html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+                            html += '<span><strong style="color:#ff6000;">' + (item.titulo || item.title) + '</strong></span>';
+                            html += '<span><span class="pill">' + (item.badge || 'Local') + '</span>';
+                            if (item.id && AUTH_TOKEN) {
+                                html += '<button class="delete-song" data-id="' + item.id + '" title="Eliminar">&#x2716;</button>';
+                            }
+                            html += '</span></div></li>';
+                        }
+                        html += '</ul>';
+                        $('#libraryTree').html(html);
+                    } else {
+                        var html = '<div class="video-grid">';
+                        for (var j = 0; j < videoLibrary.length; j++) {
+                            var clip = videoLibrary[j];
+                            html += '<div class="video-card' + (j === currentIndex ? ' active' : '') + '" data-index="' + j + '" data-src="' + clip.src + '">';
+                            html += '<div><h3>' + clip.titulo + '</h3><p>Haz clic para reproducir el video en el panel.</p></div>';
+                            html += '<span>';
+                            if (clip._local) {
+                                html += '<button class="delete-song delete-video" data-vindex="' + j + '" title="Eliminar">&#x2716;</button>';
+                            }
+                            html += '<span class="pill" style="margin-left:6px;">' + clip.badge + '</span>';
+                            html += '</span></div>';
+                        }
+                        html += '</div>';
+                        $('#libraryTree').html(html);
+                    }
+                }
+
+                function synchronizePlayerView() {
+                    if (currentMode === 'audio') {
+                        $(audioPlayer).removeClass('hidden');
+                        $(videoPlayer).addClass('hidden');
+                        $('#dailyMotionWrap').addClass('hidden');
+                        $('#dailyMotionPlayer').attr('src', '');
+                        playerStatus.text('Modo audio activo. Selecciona o importa una canción.');
+                        currentPlayer = audioPlayer;
+                    } else {
+                        $(audioPlayer).addClass('hidden');
+                        $(videoPlayer).removeClass('hidden');
+                        playerStatus.text('Modo video activo. Selecciona o importa un video.');
+                        currentPlayer = videoPlayer;
+                    }
+                }
+
+                function updateTabs() {
+                    $('.tab-button').removeClass('active');
+                    $('.tab-button[data-mode="' + currentMode + '"]').addClass('active');
+                    renderLibrary();
+                    synchronizePlayerView();
+                }
+
+                function updateProgress() {
+                    if (!currentPlayer.duration || isNaN(currentPlayer.duration)) return;
+                    currentTime.text(formatearTiempo(currentPlayer.currentTime));
+                    totalTime.text(formatearTiempo(currentPlayer.duration));
+                    seekSlider.slider('value', (currentPlayer.currentTime / currentPlayer.duration) * 100);
+                }
+
+                function recordHistory(songId, title) {
+                    if (!AUTH_TOKEN || !songId) return;
+                    $.ajax({
+                        url: API + '/history',
+                        type: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+                        contentType: 'application/json',
+                        data: JSON.stringify({ song_id: songId, title: title || 'Desconocido' })
+                    });
+                }
+
+                function loadHistory() {
+                    if (!AUTH_TOKEN) return;
+                    $.ajax({
+                        url: API + '/history',
+                        type: 'GET',
+                        headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+                        success: function(data) {
+                            if (!data || !data.length) {
+                                $('#historySection').hide();
+                                return;
+                            }
+                            var html = '';
+                            for (var i = 0; i < data.length; i++) {
+                                var d = new Date(data[i].played_at);
+                                var fecha = d.toLocaleDateString('es-ES', {day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+                                html += '<li><span style="color:#00ff66;">▶</span> ' + data[i].title + ' <span style="color:#555;font-size:0.75rem;">' + fecha + '</span></li>';
+                            }
+                            $('#historyList').html(html);
+                            $('#historySection').show();
+                        }
+                    });
+                }
+
+                function playAudio(index) {
+                    if (index < 0 || index >= audioLibrary.length) return;
+                    currentMode = 'audio';
+                    currentIndex = index;
+                    var item = audioLibrary[index];
+                    var src = item.src || '/uploads/' + item.filename;
+                    audioSource.src = src;
+                    audioPlayer.load();
+                    audioPlayer.play();
+                    mediaTitle.text(item.titulo || item.title);
+                    playerStatus.text('Reproduciendo audio: ' + (item.titulo || item.title));
+                    $('#buttonPlay').removeClass('paused').addClass('playing').text('⏸');
+                    updateTabs();
+                    if (item.id) recordHistory(item.id, item.titulo || item.title);
+                }
+
+                function playVideo(index) {
+                    if (index < 0 || index >= videoLibrary.length) return;
+                    currentMode = 'video';
+                    currentIndex = index;
+                    videoSource.src = videoLibrary[index].src;
+                    videoPlayer.load();
+                    videoPlayer.play();
+                    mediaTitle.text(videoLibrary[index].titulo);
+                    playerStatus.text('Reproduciendo video: ' + videoLibrary[index].titulo);
+                    $('#buttonPlay').removeClass('paused').addClass('playing').text('⏸');
+                    $('#dailyMotionWrap').addClass('hidden');
+                    $('#dailyMotionPlayer').attr('src', '');
+                    $(videoPlayer).removeClass('hidden');
+                    updateTabs();
+                }
+
+                seekSlider.slider({
+                    range: 'min',
                     value: 0,
                     min: 0,
                     max: 100,
                     slide: function(event, ui) {
-                        // Permitir al usuario arrastrar la barra superior para adelantar/atrasar la canción
-                        if(miAudio.duration) {
-                            var nuevoTiempo = (ui.value / 100) * miAudio.duration;
-                            miAudio.currentTime = nuevoTiempo;
+                        if (currentPlayer.duration) {
+                            currentPlayer.currentTime = (ui.value / 100) * currentPlayer.duration;
                         }
                     }
                 });
 
-                // Función auxiliar para formatear los segundos a formato 00:00:00
-                function formatearTiempo(segundos) {
-                    if (isNaN(segundos)) return "00:00:00";
-                    var hrs = Math.floor(segundos / 3600);
-                    var mins = Math.floor((segundos % 3600) / 60);
-                    var secs = Math.floor(segundos % 60);
-                    return (hrs < 10 ? "0" : "") + hrs + ":" + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
-                }
-
-                // SINCRONIZACIÓN EN TIEMPO REAL (Barra y Reloj Verde)
-                miAudio.addEventListener('timeupdate', function() {
-                    // 1. Actualizar el contador digital verde de la izquierda
-                    $('#currentTime').text(formatearTiempo(miAudio.currentTime));
-                    
-                    // 2. Mover la barra de progreso superior de forma automática
-                    if (miAudio.duration) {
-                        var porcentajeProgreso = (miAudio.currentTime / miAudio.duration) * 100;
-                        $("#seekSlider").slider("value", porcentajeProgreso);
+                volumeSlider.slider({
+                    range: 'min',
+                    min: 0,
+                    max: 100,
+                    value: 100,
+                    slide: function(event, ui) {
+                        var volume = ui.value / 100;
+                        audioPlayer.volume = volume;
+                        videoPlayer.volume = volume;
+                        currentVolume.text(ui.value + '%');
                     }
                 });
 
-                // Capturar el momento en que se conoce la duración real del archivo de audio
-                miAudio.addEventListener('loadedmetadata', function() {
-                    $('#totalTime').text(formatearTiempo(miAudio.duration));
+                audioPlayer.addEventListener('timeupdate', function() {
+                    if (currentMode === 'audio') updateProgress();
+                });
+                videoPlayer.addEventListener('timeupdate', function() {
+                    if (currentMode === 'video') updateProgress();
+                });
+                audioPlayer.addEventListener('loadedmetadata', function() {
+                    if (currentMode === 'audio') updateProgress();
+                });
+                videoPlayer.addEventListener('loadedmetadata', function() {
+                    if (currentMode === 'video') updateProgress();
+                });
+                audioPlayer.addEventListener('ended', function() {
+                    playerStatus.text('Audio finalizado.');
+                    $('#buttonPlay').removeClass('playing').addClass('paused').text('▶');
+                });
+                videoPlayer.addEventListener('ended', function() {
+                    playerStatus.text('Video finalizado.');
+                    $('#buttonPlay').removeClass('playing').addClass('paused').text('▶');
                 });
 
-                // Función maestra para cambiar de canción
-                function cargarCancion(index) {
-                    if (index < 0 || index >= canciones.length) return; 
-                    
-                    indiceActual = index;
-                    var cancion = canciones[indiceActual];
-
-                    // Actualizar iluminación en el panel central
-                    $('.item-musica').css('background', '#16161f').css('color', '#fff');
-                    $('.item-musica[data-index="' + indiceActual + '"]').css('background', '#222230').css('color', '#00ff66');
-
-                    // Cambiar el origen del archivo en el reproductor inferior
-                    $('#audioSource').attr('src', cancion.src);
-                    miAudio.load(); 
-                    miAudio.play();
-
-                    // Sincronizar estados visuales de la botonera principal
-                    $('#buttonPlay').removeClass('paused').addClass('playing');
-                    $('#mediaTitle').text('Reproduciendo: ' + cancion.src + ' (Modo Activo)');
-                    $('#currentVolume').text('100%');
-                }
-
-                // Evento al dar clic directo sobre una canción de la lista
-                $('.item-musica').click(function() {
-                    var index = parseInt($(this).attr('data-index'));
-                    cargarCancion(index);
+                $('#libraryTree').delegate('.item-musica', 'click', function() {
+                    playAudio(parseInt($(this).attr('data-index'), 10));
                 });
-
-                // Botón "Siguiente" (Next)
-                $('#buttonNext').click(function() {
-                    var siguiente = indiceActual + 1;
-                    if (siguiente >= canciones.length) {
-                        siguiente = 0; 
+                $('#libraryTree').delegate('.video-card', 'click', function() {
+                    playVideo(parseInt($(this).attr('data-index'), 10));
+                });
+                $('#libraryTree').delegate('.delete-song', 'click', function(e) {
+                    e.stopPropagation();
+                    var id = $(this).attr('data-id');
+                    if (id) {
+                        if (!confirm('¿Eliminar esta canción de tu biblioteca?')) return;
+                        $.ajax({
+                            url: API + '/songs/' + id,
+                            type: 'DELETE',
+                            headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+                            success: function() { loadUserSongs(); loadHistory(); }
+                        });
+                        return;
                     }
-                    cargarCancion(siguiente);
-                    return false;
-                });
-
-                // Botón "Anterior" (Prev)
-                $('#buttonPrev').click(function() {
-                    var anterior = indiceActual - 1;
-                    if (anterior < 0) {
-                        anterior = canciones.length - 1; 
+                    var vindex = $(this).attr('data-vindex');
+                    if (vindex !== undefined) {
+                        videoLibrary.splice(parseInt(vindex, 10), 1);
+                        if (currentIndex >= videoLibrary.length) currentIndex = videoLibrary.length - 1;
+                        if (currentMode === 'video') renderLibrary();
                     }
-                    cargarCancion(anterior);
-                    return false;
                 });
 
-                // Control del botón clásico PLAY / PAUSE de VLC
-                $('#buttonPlay').click(function() {
-                    if (miAudio.paused) {
-                        miAudio.play();
-                        $(this).removeClass('paused').addClass('playing');
-                        $('#mediaTitle').text('Reproduciendo: ' + canciones[indiceActual].src + ' (Modo Activo)');
+                $('.tab-button').click(function() {
+                    currentMode = $(this).attr('data-mode');
+                    currentIndex = 0;
+                    if (currentMode === 'audio') {
+                        $('#videoSearchWrap').hide();
                     } else {
-                        miAudio.pause();
-                        $(this).removeClass('playing').addClass('paused');
-                        $('#mediaTitle').text('Pausado: ' + canciones[indiceActual].src);
+                        $('#videoSearchWrap').show();
+                    }
+                    renderLibrary();
+                    synchronizePlayerView();
+                    return false;
+                });
+
+                $('#buttonPrev').click(function() {
+                    if (currentMode === 'audio') {
+                        currentIndex = (currentIndex - 1 + audioLibrary.length) % audioLibrary.length;
+                        playAudio(currentIndex);
+                    } else {
+                        currentIndex = (currentIndex - 1 + videoLibrary.length) % videoLibrary.length;
+                        playVideo(currentIndex);
                     }
                     return false;
                 });
 
-                // Control del botón clásico STOP de VLC
-                $('#buttonStop').click(function() {
-                    miAudio.pause();
-                    miAudio.currentTime = 0;
-                    $("#seekSlider").slider("value", 0);
-                    $('#buttonPlay').removeClass('playing').addClass('paused');
-                    $('#mediaTitle').text('Transmisión Detenida');
-                    $('#currentTime').text('00:00:00');
+                $('#buttonPlay').click(function() {
+                    if (currentPlayer.paused) {
+                        currentPlayer.play();
+                        $(this).removeClass('paused').addClass('playing').text('⏸');
+                        playerStatus.text('Reproduciendo ' + currentMode + '.');
+                    } else {
+                        currentPlayer.pause();
+                        $(this).removeClass('playing').addClass('paused').text('▶');
+                        playerStatus.text('Pausado.');
+                    }
                     return false;
                 });
 
-                // Animaciones de Hover estéticos
-                $('.item-musica').hover(
-                    function() { $(this).css('border-left-color', '#00ff66').css('transform', 'translateX(4px)'); },
-                    function() { $(this).css('border-left-color', '#ff6000').css('transform', 'translateX(0px)'); }
-                );
+                $('#buttonNext').click(function() {
+                    if (currentMode === 'audio') {
+                        currentIndex = (currentIndex + 1) % audioLibrary.length;
+                        playAudio(currentIndex);
+                    } else {
+                        currentIndex = (currentIndex + 1) % videoLibrary.length;
+                        playVideo(currentIndex);
+                    }
+                    return false;
+                });
 
-                // Alternar paneles con botones secundarios
-                $('#buttonPlayList').click(function(){
+                $('#buttonOpen').click(function() {
+                    if (AUTH_TOKEN) {
+                        $('#audioUploadInput').trigger('click');
+                    } else {
+                        $('#audioImportInput').trigger('click');
+                    }
+                    return false;
+                });
+
+                $('#buttonStop').click(function() {
+                    currentPlayer.pause();
+                    currentPlayer.currentTime = 0;
+                    seekSlider.slider('value', 0);
+                    $('#buttonPlay').removeClass('playing').addClass('paused').text('▶');
+                    playerStatus.text('Reproductor detenido.');
+                    currentTime.text('00:00:00');
+                    return false;
+                });
+
+                $('#buttonFull').click(function() {
+                    var elem = document.getElementById('mediaViewer');
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else if (elem.requestFullscreen) {
+                        elem.requestFullscreen();
+                    }
+                    return false;
+                });
+
+                var broadcasting = false;
+                $('#buttonSout').click(function() {
+                    broadcasting = !broadcasting;
+                    playerStatus.text(broadcasting ? 'Transmitiendo al stream virtual...' : 'Salida de transmisión detenida.');
+                    return false;
+                });
+
+                $('#buttonPlayList').click(function() {
                     $('#libraryTree').slideToggle();
                     return false;
                 });
-                $('#buttonViewer').click(function(){
+
+                $('#buttonViewer').click(function() {
                     $('#mediaViewer').slideToggle();
                     return false;
                 });
+
+                $('#buttonImportAudio').click(function() {
+                    if (AUTH_TOKEN) {
+                        $('#audioUploadInput').trigger('click');
+                    } else {
+                        $('#audioImportInput').trigger('click');
+                    }
+                    return false;
+                });
+
+                $('#buttonImportVideo').click(function() {
+                    $('#videoImportInput').trigger('click');
+                    return false;
+                });
+
+                $('#audioImportInput').change(function(event) {
+                    var files = event.target.files;
+                    if (!files || !files.length) return;
+                    for (var i = 0; i < files.length; i++) {
+                        var file = files[i];
+                        if (!file.type.match('audio.*')) continue;
+                        var url = URL.createObjectURL(file);
+                        audioLibrary.push({ src: url, titulo: 'Importado: ' + file.name, badge: 'Local + PC' });
+                    }
+                    currentMode = 'audio';
+                    currentIndex = audioLibrary.length - 1;
+                    playAudio(currentIndex);
+                    return false;
+                });
+
+                $('#audioUploadInput').change(function(event) {
+                    var files = event.target.files;
+                    if (!files || !files.length || !AUTH_TOKEN) return;
+                    var file = files[0];
+                    if (!file.type.match('audio.*')) return;
+                    var fd = new FormData();
+                    fd.append('audio', file);
+                    $.ajax({
+                        url: API + '/songs',
+                        type: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+                        processData: false,
+                        contentType: false,
+                        data: fd,
+                        success: function() {
+                            loadUserSongs();
+                            loadHistory();
+                        }
+                    });
+                    return false;
+                });
+
+                $('#videoImportInput').change(function(event) {
+                    var files = event.target.files;
+                    if (!files || !files.length) return;
+                    for (var i = 0; i < files.length; i++) {
+                        var file = files[i];
+                        if (!file.type.match('video.*')) continue;
+                        var url = URL.createObjectURL(file);
+                        videoLibrary.push({ src: url, titulo: 'Importado: ' + file.name, badge: 'Local + PC', _local: true });
+                    }
+                    currentMode = 'video';
+                    currentIndex = videoLibrary.length - 1;
+                    playVideo(currentIndex);
+                    return false;
+                });
+
+                function irAYoutube(q) {
+                    if (!q) return;
+                    window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
+                }
+
+                $('#videoSearchInput').keyup(function() {
+                    var q = $(this).val().trim();
+                    var $suggest = $('#videoSearchSuggest');
+                    if (q.length < 2) { $suggest.empty().hide(); return; }
+                    $.ajax({
+                        url: 'https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q=' + encodeURIComponent(q),
+                        dataType: 'jsonp',
+                        success: function(data) {
+                            if (!data[1] || !data[1].length) { $suggest.hide(); return; }
+                            var html = '';
+                            $.each(data[1], function(i, item) {
+                                var sug = item[0];
+                                html += '<div class="sug-item" data-q="' + sug.replace(/"/g,'&quot;') + '" style="padding:8px 14px;cursor:pointer;color:#ccc;font-size:0.9rem;border-bottom:1px solid rgba(255,255,255,0.04);">' + sug + '</div>';
+                            });
+                            $suggest.html(html).show();
+                        }
+                    });
+                });
+
+                $('#videoSearchSuggest').delegate('.sug-item', 'click', function() {
+                    irAYoutube($(this).attr('data-q'));
+                    $('#videoSearchSuggest').empty().hide();
+                });
+
+                $('#videoSearchBtn').click(function() {
+                    irAYoutube($('#videoSearchInput').val().trim());
+                });
+
+                $('#videoSearchInput').keydown(function(e) {
+                    if (e.keyCode === 13) { irAYoutube($(this).val().trim()); $('#videoSearchSuggest').empty().hide(); }
+                });
+
+                $(document).click(function(e) {
+                    if (!$(e.target).closest('#videoSearchInput, #videoSearchSuggest').length) {
+                        $('#videoSearchSuggest').empty().hide();
+                    }
+                });
+
+                function showAuthOverlay(show) {
+                    if (show) {
+                        $('#authOverlay').show();
+                    } else {
+                        $('#authOverlay').hide();
+                    }
+                }
+
+                function showUserBar(user) {
+                    $('#userName').text('Hola, ' + (user.display_name || user.name || user.username));
+                    $('#userBar').css('display', 'flex');
+                    $('#historySection').show();
+                    loadHistory();
+                }
+
+                function hideUserBar() {
+                    $('#userBar').hide();
+                    $('#historySection').hide();
+                }
+
+                function loadUserSongs() {
+                    if (!AUTH_TOKEN) return;
+                    $.ajax({
+                        url: API + '/songs',
+                        type: 'GET',
+                        headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+                        success: function(data) {
+                            audioLibrary = data || [];
+                            if (audioLibrary.length === 0) {
+                                audioLibrary = [
+                                    { src: 'cancion1.mp3', titulo: 'Canción 1: Éxito de Prueba MP3', badge: 'Demo' },
+                                    { src: 'cancion2.mp3', titulo: 'Canción 2: Pista de Demostración', badge: 'Demo' },
+                                    { src: 'cancion3.mp3', titulo: 'Canción 3: Audio de Evaluación', badge: 'Demo' }
+                                ];
+                            }
+                            if (currentMode === 'audio') renderLibrary();
+                        }
+                    });
+                }
+
+                function loadUserData() {
+                    if (!AUTH_TOKEN) { logout(); return; }
+                    $.ajax({
+                        url: API + '/user',
+                        type: 'GET',
+                        headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+                        success: function(user) {
+                            currentUser = user;
+                            showAuthOverlay(false);
+                            showUserBar(user);
+                            loadUserSongs();
+                        },
+                        error: function() { logout(); }
+                    });
+                }
+
+                function logout() {
+                    localStorage.removeItem('vlc_token');
+                    AUTH_TOKEN = null;
+                    currentUser = null;
+                    audioLibrary = [];
+                    hideUserBar();
+                    resetAuthForm();
+                    showAuthOverlay(true);
+                    renderLibrary();
+                }
+
+                var isRegisterMode = false;
+
+                function resetAuthForm() {
+                    isRegisterMode = false;
+                    $('#authTitle').text('Iniciar sesión');
+                    $('#authSubtitle').text('Ingresa a tu biblioteca personal');
+                    $('#authBtn').text('Ingresar');
+                    $('#authToggle a').text('Regístrate');
+                    $('#authError').hide();
+                    $('#authName').hide();
+                    $('#authUser').val('');
+                    $('#authPass').val('');
+                    $('#authName').val('');
+                }
+
+                $('#authSwitch').click(function() {
+                    isRegisterMode = !isRegisterMode;
+                    if (isRegisterMode) {
+                        $('#authTitle').text('Crear cuenta');
+                        $('#authSubtitle').text('Regístrate para tener tu biblioteca personal');
+                        $('#authBtn').text('Registrarse');
+                        $('#authToggle a').text('Inicia sesión');
+                        $('#authName').show();
+                    } else {
+                        resetAuthForm();
+                    }
+                    $('#authError').hide();
+                });
+
+                $('#authBtn').click(function() {
+                    var user = $('#authUser').val().trim();
+                    var pass = $('#authPass').val().trim();
+                    var name = $('#authName').val().trim();
+                    if (!user || !pass) {
+                        $('#authError').text('Completa todos los campos.').show();
+                        return;
+                    }
+                    if (isRegisterMode && !name) {
+                        $('#authError').text('Ingresa tu nombre completo.').show();
+                        return;
+                    }
+                    var endpoint = isRegisterMode ? '/register' : '/login';
+                    var payload = { username: user, password: pass };
+                    if (isRegisterMode) payload.display_name = name;
+                    $.ajax({
+                        url: API + endpoint,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(payload),
+                        success: function(data) {
+                            localStorage.setItem('vlc_token', data.token);
+                            setAuth();
+                            loadUserData();
+                        },
+                        error: function(xhr) {
+                            var msg = 'Error de conexión.';
+                            try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+                            $('#authError').text(msg).show();
+                        }
+                    });
+                });
+
+                $('#logoutBtn').click(function() { logout(); });
+
+                if (AUTH_TOKEN) {
+                    loadUserData();
+                } else {
+                    showAuthOverlay(true);
+                }
+
+                function initialize() {
+                    renderLibrary();
+                    synchronizePlayerView();
+                    audioPlayer.volume = 1;
+                    videoPlayer.volume = 1;
+                    $('#buttonPlay').text('▶');
+                }
+
+                initialize();
             });
         //]]>
         </script>
@@ -186,48 +683,91 @@
             
             <div id="controlContainer" class="ui-widget">
                 <div id="controlTable" class="ui-widget-content" style="background: #101014; border: 1px solid #1f1f26;">
-                    <ul id="controlButtons">
-                        <li id="buttonPrev" class="button48 ui-corner-all" title="Anterior"></li>
-                        <li id="buttonPlay" class="button48 ui-corner-all paused" title="Reproducir"></li>
-                        <li id="buttonNext" class="button48 ui-corner-all" title="Siguiente"></li>
-                        <li id="buttonOpen" class="button48 ui-corner-all" title="Abrir Archivo"></li>
-                        <li id="buttonStop" class="button48 ui-corner-all" title="Detener"></li>
-                        <li id="buttonFull" class="button48 ui-corner-all" title="Pantalla Completa"></li>
-                        <li id="buttonSout" class="button48 ui-corner-all" title="Transmitir"></li>
-                    </ul>
-                    <ul id="buttonszone2" class="buttonszone">
-                        <li id="buttonPlayList" class="button ui-widget ui-state-default ui-corner-all" title="Ocultar Panel"><span class="ui-icon ui-icon-note"></span>Lista</li>
-                        <li id="buttonViewer" class="button ui-widget ui-state-default ui-corner-all" title="Ocultar Reproductor"><span class="ui-icon ui-icon-video"></span>Reproductor</li>
-                    </ul>
-                    <div id="volumesliderzone">
-                        <div id="volumeSlider" title="Volumen"><img src="images/speaker-32.png" class="ui-slider-handle" alt="volume"/></div>
-                        <div id="currentVolume" class="dynamic" style="color: #ff6000;">100%</div>
-                    </div>
-                    <div id="artszone">
-                        <img id="albumArt" src="images/vlc-48.png" width="141px" height="130px" alt="Album Art" />
-                    </div>
                     <div id="mediaTitle" class="dynamic" style="color: #00ff66; font-weight: bold;">Por favor, selecciona una canción de la lista de abajo...</div>
+                    <div id="playerStatus" class="dynamic" style="color:#00ff66; font-weight: normal; margin-top:4px;">Listo para reproducir audio local.</div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="background: linear-gradient(135deg, rgba(255,96,0,0.08) 0%, rgba(0,255,102,0.04) 100%); border: 1px solid rgba(255,96,0,0.2); border-radius: 16px; padding: 12px 20px; margin: 6px 0 10px 0; font-family: sans-serif; text-align: center; box-shadow: 0 0 20px rgba(255,96,0,0.06);">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                                <span style="background: rgba(255,96,0,0.15); padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; color: #ff6000; letter-spacing: 0.5px; text-transform: uppercase;">&#x1F527; Reingeniería</span>
+                                <span style="color: #666; font-size: 0.8rem;">&#x2022;</span>
+                                <span style="color: #aaa; font-size: 0.82rem;">Proyecto:</span>
+                                <span style="color: #fff; font-weight: 700; font-size: 0.85rem;">VLC Web Core</span>
+                                <span style="color: #444; font-size: 0.8rem;">|</span>
+                                <span style="color: #aaa; font-size: 0.82rem;">Dev:</span>
+                                <span style="color: #00ff66; font-weight: 700; font-size: 0.85rem;">Jeison Nava</span>
+                                <span style="color: #444; font-size: 0.8rem;">|</span>
+                                <span style="color: #aaa; font-size: 0.82rem;">Entorno:</span>
+                                <span style="background: rgba(0,255,102,0.1); padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; color: #00ff66; letter-spacing: 0.3px;">OLED</span>
+                            </div>
+                        </div>
+                        <div id="artszone">
+                            <img id="albumArt" src="images/vlc-48.png" width="141px" height="130px" alt="Album Art" />
+                        </div>
+                        <div id="volumesliderzone">
+                            <div id="volumeSlider" title="Volumen"></div>
+                            <div id="currentVolume" class="dynamic" style="color: #ff6000;">100%</div>
+                        </div>
+                    </div>
                     <div id="seekContainer">
                         <div id="seekSlider" title="Posición"></div>
                         <div id="currentTime" class="dynamic" style="color: #00ff66;">00:00:00</div>
                         <div id="totalTime" class="dynamic">00:00:00</div>
                     </div>
+                    <ul id="controlButtons">
+                        <li id="buttonPrev" class="button48 ui-corner-all" title="Anterior">&#x23EE;</li>
+                        <li id="buttonPlay" class="button48 ui-corner-all paused" title="Reproducir">&#x23EF;</li>
+                        <li id="buttonNext" class="button48 ui-corner-all" title="Siguiente">&#x23ED;</li>
+                        <li id="buttonOpen" class="button48 ui-corner-all" title="Abrir Archivo">&#x1F4C1;</li>
+                        <li id="buttonStop" class="button48 ui-corner-all" title="Detener">&#x23F9;</li>
+                        <li id="buttonFull" class="button48 ui-corner-all" title="Pantalla Completa">&#x26F6;</li>
+                        <li id="buttonSout" class="button48 ui-corner-all" title="Transmitir">&#x1F4E1;</li>
+                    </ul>
                 </div>
             </div>
 
+            <div id="userBar">
+                <div id="userGreeting"><span id="userName"></span><small>· Usuario VLC</small></div>
+                <button id="logoutBtn">Cerrar sesión</button>
+            </div>
+
+            <div id="historySection">
+                <div id="historyTitle">Historial de reproducción</div>
+                <ul id="historyList"></ul>
+            </div>
+
             <div id="libraryContainer" class="ui-widget" style="margin-top: 15px;">
-                <div id="libraryTree" class="ui-widget-content" style="min-height: 180px; background: #0b0b0f; border: 1px solid #1f1f26; border-radius: 6px; overflow: hidden;">
+                <div id="libraryTabs" style="padding: 0 12px;">
+                    <button class="tab-button active" data-mode="audio">&#x1F3B5; Biblioteca de Audio</button>
+                    <button class="tab-button" data-mode="video">&#x1F3AC; Biblioteca de Video</button>
+                </div>
+                <div id="videoSearchWrap" style="display:none; padding: 8px 12px 0 12px;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="videoSearchInput" placeholder="Buscar videos en la web..." style="flex:1; padding:10px 16px; border-radius:999px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:#fff; font-size:0.9rem; outline:none;" />
+                        <button id="videoSearchBtn" class="tab-button" style="padding:10px 20px;">&#x1F50D; Buscar</button>
+                        <button id="buttonImportVideo" class="tab-button" title="Importar Video Local">&#x1F4C1; Importar</button>
+                    </div>
+                    <div id="videoSearchSuggest" style="display:none; background:#16161f; border:1px solid #252533; border-radius:12px; margin-top:4px; padding:4px 0;"></div>
+                    <div id="videoSearchResults" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-top:10px;"></div>
+                </div>
+                <div id="libraryTree" class="ui-widget-content" style="min-height: 180px; background: #0b0b0f; border: 1px solid #1f1f26; border-radius: 6px; overflow: hidden; padding: 16px;">
                     </div>
             </div>
 
             <div id="viewContainer" class="ui-widget" style="margin-top: 15px;">
                 <div id="mediaViewer" class="ui-widget-content" style="background: #101014; border: 1px solid #1f1f26; border-radius: 6px; padding: 25px; text-align: center;">
                     <div id="player" style="width: 100%;">
-                        <h3 style="color: #ff6000; margin-top: 0; margin-bottom: 15px; font-family: Arial, sans-serif; letter-spacing: 1px;">🎵 REPRODUCTOR DE REINGENIERÍA AUDIO LOCAL</h3>
+                        <h3 style="color: #ff6000; margin-top: 0; margin-bottom: 15px; font-family: Arial, sans-serif; letter-spacing: 1px;">&#x1F3B5; REPRODUCTOR DE REINGENIERÍA AUDIO / VIDEO</h3>
                         <audio id="audioNativo" controls style="width: 95%; margin: 0 auto; background: #1a1a24; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                            <source id="audioSource" src="cancion1.mp3" type="audio/mpeg">
+                            <source id="audioSource" src="cancion1.mp3" type="audio/mpeg" />
                             Tu navegador no soporta el elemento de audio HTML5.
                         </audio>
+                        <video id="videoNativo" controls class="hidden" style="width: 95%; margin: 16px auto 0; display: block; background: #1a1a24; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); max-height: 420px;">
+                            <source id="videoSource" src="" type="video/mp4" />
+                            Tu navegador no soporta el elemento de video HTML5.
+                        </video>
+                        <div id="dailyMotionWrap" class="hidden" style="width:95%; margin:16px auto 0; position:relative; border-radius:20px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.5);">
+                            <iframe id="dailyMotionPlayer" width="100%" height="400" frameborder="0" allowfullscreen style="border-radius:20px; display:block;"></iframe>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -238,11 +778,22 @@
         </div>
         </div>
 
-        <div class="panel-reingenieria" style="position: fixed; bottom: 20px; right: 20px; background: #101014; border: 1px solid #ff6000; padding: 15px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.7); font-family: sans-serif; z-index: 9999;">
-            <b style="color: #ff6000; font-size: 1.1em; display: block; margin-bottom: 5px;">🔧 REINGENIERÍA DE INTERFAZ</b>
-            <small style="color: #888;">Proyecto:</small> <span style="color: #fff; font-weight: bold;">VLC Web Core</span><br/>
-            <small style="color: #888;">Desarrollador:</small> <span style="color: #00ff66; font-weight: bold;">Jeison</span><br/>
-            <small style="color: #888;">Entorno:</small> <span style="color: #00ff66;">Modo Oscuro OLED (Estable)</span>
+
+        <div id="authOverlay">
+            <div id="authBox">
+                <h2 id="authTitle">Iniciar sesión</h2>
+                <p id="authSubtitle">Ingresa a tu biblioteca personal</p>
+                <div id="authError"></div>
+                <input type="text" id="authName" placeholder="Nombre completo" style="display:none;" />
+                <input type="text" id="authUser" placeholder="Usuario" />
+                <input type="password" id="authPass" placeholder="Contraseña" />
+                <button class="auth-btn" id="authBtn">Ingresar</button>
+                <div id="authToggle">¿No tienes cuenta? <a id="authSwitch">Regístrate</a></div>
+            </div>
         </div>
+
+        <input type="file" id="audioImportInput" accept="audio/*" class="hidden" />
+        <input type="file" id="videoImportInput" accept="video/*" multiple class="hidden" />
+        <input type="file" id="audioUploadInput" accept="audio/*" class="hidden" />
     </body>
 </html>

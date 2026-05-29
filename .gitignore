@@ -1,0 +1,9 @@
+# Ignorar dependencias de Node
+node_modules/
+
+# Ignorar archivos temporales o multimedia subidos localmente si lo deseas
+uploads/*.mp3
+uploads/*.wav
+
+# Ignorar variables de entorno secretas (si usas un archivo .env)
+.env
